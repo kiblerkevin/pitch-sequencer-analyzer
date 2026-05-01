@@ -1,7 +1,7 @@
 # Runbook
 
 ## Prerequisites
-- Node.js 20 LTS
+- Node.js 22 LTS
 - Python 3.12
 - Docker & Docker Compose
 - OpenTofu CLI
