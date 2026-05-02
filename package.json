@@ -1,0 +1,19 @@
+{
+  "name": "pitch-sequencer-analyzer",
+  "private": true,
+  "scripts": {
+    "lint:frontend": "cd services/frontend && npm run lint",
+    "lint:orchestrator": "cd services/orchestrator && npm run lint",
+    "lint:inference": "cd services/inference && make lint",
+    "lint:ingestion": "cd services/ingestion && make lint",
+    "lint": "npm run lint:frontend && npm run lint:orchestrator",
+    "format:frontend": "cd services/frontend && npx prettier --write \"src/**/*.{ts,tsx}\"",
+    "format:orchestrator": "cd services/orchestrator && npm run format",
+    "format:inference": "cd services/inference && make format",
+    "format:ingestion": "cd services/ingestion && make format",
+    "format": "npm run format:frontend && npm run format:orchestrator",
+    "format:check": "cd services/orchestrator && npx prettier --check \"src/**/*.ts\" \"../frontend/src/**/*.{ts,tsx}\"",
+    "test:orchestrator": "cd services/orchestrator && npm test",
+    "test": "npm run test:orchestrator"
+  }
+}

@@ -1,1 +1,48 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.next/
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage/
+htmlcov/
+.pytest_cache/
+
+# Python virtual environments
+.venv/
+venv/
+
+# Terraform/OpenTofu
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+!*.tfvars.example
+
+# Docker
+.dockerignore
+
+# Linter caches
+.ruff_cache/
+
+# Misc
 .checkmarxIgnored

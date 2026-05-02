@@ -1,0 +1,126 @@
+---
+name: Infrastructure Plan
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "infrastructure/**"
+
+env:
+  TOFU_VERSION: "1.9.0"
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    strategy:
+      matrix:
+        environment: [dev]
+    defaults:
+      run:
+        working-directory: infrastructure/environments/${{ matrix.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup OpenTofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu-version: ${{ env.TOFU_VERSION }}
+
+      - name: Check for GCP credentials
+        id: check-creds
+        run: |
+          if [ -z "${{ secrets.GCP_CREDENTIALS }}" ]; then
+            echo "has_creds=false" >> $GITHUB_OUTPUT
+            echo "::warning::GCP credentials not configured. Skipping tofu plan."
+          else
+            echo "has_creds=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Authenticate to GCP
+        if: steps.check-creds.outputs.has_creds == 'true'
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+      - name: Tofu Init
+        if: steps.check-creds.outputs.has_creds == 'true'
+        run: tofu init -no-color
+        continue-on-error: true
+
+      - name: Tofu Plan
+        if: steps.check-creds.outputs.has_creds == 'true'
+        id: plan
+        run: tofu plan -no-color -out=tfplan 2>&1 | tee plan-output.txt
+        continue-on-error: true
+
+      - name: Post plan to PR
+        if: steps.check-creds.outputs.has_creds == 'true' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const planPath = `infrastructure/environments/${{ matrix.environment }}/plan-output.txt`;
+            let plan = '';
+            try {
+              plan = fs.readFileSync(planPath, 'utf8');
+            } catch (e) {
+              plan = 'No plan output available.';
+            }
+
+            const maxLength = 60000;
+            if (plan.length > maxLength) {
+              plan = plan.substring(0, maxLength) + '\n\n... (truncated)';
+            }
+
+            const body = `### OpenTofu Plan — \`${{ matrix.environment }}\`
+
+            \`\`\`
+            ${plan}
+            \`\`\`
+
+            *Plan result: \`${{ steps.plan.outcome }}\`*`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const marker = `### OpenTofu Plan — \`${{ matrix.environment }}\``;
+            const existing = comments.find(c => c.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body: body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body,
+              });
+            }
+
+      - name: Post skip notice to PR
+        if: steps.check-creds.outputs.has_creds == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `### OpenTofu Plan — \`${{ matrix.environment }}\`
+
+            ⚠️ **Skipped** — GCP credentials are not configured. Add the \`GCP_CREDENTIALS\` secret to enable infrastructure planning.`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body,
+            });

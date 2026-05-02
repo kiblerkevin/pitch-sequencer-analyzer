@@ -1,8 +1,9 @@
 # Runbook
 
 ## Prerequisites
-- Node.js 22 LTS
+- Node.js 24 LTS
 - Python 3.12
+- npm 10.x (npm 11.x has a known bug where `npm install` skips package extraction)
 - Docker & Docker Compose
 - OpenTofu CLI
 - GCP CLI (`gcloud`) authenticated to the project
@@ -17,10 +18,15 @@ git clone <repository-url>
 cd pitch-sequencer-analyzer
 
 # Frontend
-cd services/frontend && npm install && cd ../..
+cd services/frontend && NODE_ENV=development npm install && cd ../..
 
 # Orchestrator
-cd services/orchestrator && npm install && cd ../..
+cd services/orchestrator && NODE_ENV=development npm install && cd ../..
+
+# Python virtual environment (from project root)
+python3 -m venv .venv
+source .venv/bin/activate
+pip install ruff
 
 # Inference
 cd services/inference && pip install -r requirements.txt && cd ../..
@@ -92,6 +98,16 @@ cd services/ingestion && python -m app.main
 ```
 
 ## Common Troubleshooting
+
+### NODE_ENV=production in shell
+Some IDE extensions (e.g., CodeGPT) set `NODE_ENV=production` globally. This causes `npm install` to skip devDependencies (ESLint, Prettier, TypeScript types, etc.). Always use `NODE_ENV=development npm install` when installing dependencies for TypeScript services.
+
+### __NEXT_PRIVATE_STANDALONE_CONFIG breaks `next build`
+Some IDE extensions inject `__NEXT_PRIVATE_STANDALONE_CONFIG` into the environment, which overrides the local Next.js config and causes `TypeError: generate is not a function` during builds. Fix by unsetting it before building:
+```bash
+env -u __NEXT_PRIVATE_STANDALONE_CONFIG npm run build
+```
+Alternatively, identify and disable the extension that sets this variable.
 
 ### Firestore emulator not connecting
 - Verify `FIRESTORE_EMULATOR_HOST` is set in the service's `.env`.

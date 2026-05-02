@@ -1,0 +1,180 @@
+---
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      orchestrator: ${{ steps.filter.outputs.orchestrator }}
+      inference: ${{ steps.filter.outputs.inference }}
+      ingestion: ${{ steps.filter.outputs.ingestion }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'services/frontend/**'
+            orchestrator:
+              - 'services/orchestrator/**'
+            inference:
+              - 'services/inference/**'
+              - 'ruff.toml'
+              - 'mypy.ini'
+            ingestion:
+              - 'services/ingestion/**'
+              - 'ruff.toml'
+              - 'mypy.ini'
+
+  lint-frontend:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: services/frontend/package-lock.json
+      - run: NODE_ENV=development npm ci
+      - run: npx eslint .
+      - run: npx prettier --check "src/**/*.{ts,tsx}"
+
+  lint-orchestrator:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.orchestrator == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/orchestrator
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: services/orchestrator/package-lock.json
+      - run: NODE_ENV=development npm ci
+      - run: npm run lint
+      - run: npx prettier --check "src/**/*.ts" "test/**/*.ts"
+
+  lint-inference:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.inference == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/inference
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff
+      - run: ruff check .
+      - run: ruff format --check .
+
+  lint-ingestion:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.ingestion == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/ingestion
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff
+      - run: ruff check .
+      - run: ruff format --check .
+
+  test-orchestrator:
+    needs: lint-orchestrator
+    if: needs.detect-changes.outputs.orchestrator == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/orchestrator
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: services/orchestrator/package-lock.json
+      - run: NODE_ENV=development npm ci
+      - run: npm run test:cov
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: orchestrator-coverage
+          path: services/orchestrator/coverage/
+
+  build-frontend:
+    needs: lint-frontend
+    if: needs.detect-changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: services/frontend
+          push: false
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+  build-orchestrator:
+    needs: test-orchestrator
+    if: needs.detect-changes.outputs.orchestrator == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: services/orchestrator
+          push: false
+          cache-from: type=gha,scope=orchestrator
+          cache-to: type=gha,mode=max,scope=orchestrator
+
+  build-inference:
+    needs: lint-inference
+    if: needs.detect-changes.outputs.inference == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: services/inference
+          push: false
+          cache-from: type=gha,scope=inference
+          cache-to: type=gha,mode=max,scope=inference
+
+  build-ingestion:
+    needs: lint-ingestion
+    if: needs.detect-changes.outputs.ingestion == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: services/ingestion
+          push: false
+          cache-from: type=gha,scope=ingestion
+          cache-to: type=gha,mode=max,scope=ingestion
