@@ -4,18 +4,34 @@ name: CI
 on:
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      service:
+        description: "Service to run CI for"
+        required: true
+        type: choice
+        default: all
+        options:
+          - all
+          - frontend
+          - orchestrator
+          - inference
+          - ingestion
 
 jobs:
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
-      frontend: ${{ steps.filter.outputs.frontend }}
-      orchestrator: ${{ steps.filter.outputs.orchestrator }}
-      inference: ${{ steps.filter.outputs.inference }}
-      ingestion: ${{ steps.filter.outputs.ingestion }}
+      frontend: ${{ steps.resolve.outputs.frontend }}
+      orchestrator: ${{ steps.resolve.outputs.orchestrator }}
+      inference: ${{ steps.resolve.outputs.inference }}
+      ingestion: ${{ steps.resolve.outputs.ingestion }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
+
+      - name: Path filter (PR only)
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@v3
         id: filter
         with:
           filters: |
@@ -31,6 +47,22 @@ jobs:
               - 'services/ingestion/**'
               - 'ruff.toml'
               - 'mypy.ini'
+
+      - name: Resolve targets
+        id: resolve
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            SERVICE="${{ inputs.service }}"
+            echo "frontend=$( [ "$SERVICE" = "all" ] || [ "$SERVICE" = "frontend" ] && echo true || echo false )" >> $GITHUB_OUTPUT
+            echo "orchestrator=$( [ "$SERVICE" = "all" ] || [ "$SERVICE" = "orchestrator" ] && echo true || echo false )" >> $GITHUB_OUTPUT
+            echo "inference=$( [ "$SERVICE" = "all" ] || [ "$SERVICE" = "inference" ] && echo true || echo false )" >> $GITHUB_OUTPUT
+            echo "ingestion=$( [ "$SERVICE" = "all" ] || [ "$SERVICE" = "ingestion" ] && echo true || echo false )" >> $GITHUB_OUTPUT
+          else
+            echo "frontend=${{ steps.filter.outputs.frontend }}" >> $GITHUB_OUTPUT
+            echo "orchestrator=${{ steps.filter.outputs.orchestrator }}" >> $GITHUB_OUTPUT
+            echo "inference=${{ steps.filter.outputs.inference }}" >> $GITHUB_OUTPUT
+            echo "ingestion=${{ steps.filter.outputs.ingestion }}" >> $GITHUB_OUTPUT
+          fi
 
   lint-frontend:
     needs: detect-changes

@@ -1,0 +1,68 @@
+---
+name: Infrastructure Destroy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to destroy"
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      confirm:
+        description: "Type the environment name to confirm destruction"
+        required: true
+        type: string
+      allow_prod:
+        description: "Set to 'true' to allow production destruction (required for prod)"
+        required: false
+        type: string
+        default: "false"
+
+env:
+  TOFU_VERSION: "1.9.0"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate confirmation
+        run: |
+          if [ "${{ inputs.confirm }}" != "${{ inputs.environment }}" ]; then
+            echo "::error::Confirmation failed. You entered '${{ inputs.confirm }}' but the environment is '${{ inputs.environment }}'."
+            exit 1
+          fi
+
+      - name: Block production destroy
+        if: inputs.environment == 'prod' && inputs.allow_prod != 'true'
+        run: |
+          echo "::error::Production destroy blocked. Set 'allow_prod' to 'true' to proceed."
+          exit 1
+
+  destroy:
+    needs: validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infrastructure/environments/${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup OpenTofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu-version: ${{ env.TOFU_VERSION }}
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+      - name: Tofu Init
+        run: tofu init -no-color
+
+      - name: Tofu Destroy
+        run: tofu destroy -auto-approve -no-color

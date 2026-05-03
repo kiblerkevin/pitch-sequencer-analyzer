@@ -6,6 +6,17 @@ on:
     branches: [main]
     paths:
       - "infrastructure/**"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to plan"
+        required: true
+        type: choice
+        default: dev
+        options:
+          - dev
+          - staging
+          - prod
 
 env:
   TOFU_VERSION: "1.9.0"
@@ -18,7 +29,7 @@ jobs:
       pull-requests: write
     strategy:
       matrix:
-        environment: [dev]
+        environment: ${{ github.event_name == 'workflow_dispatch' && fromJSON(format('["{0}"]', inputs.environment)) || fromJSON('["dev"]') }}
     defaults:
       run:
         working-directory: infrastructure/environments/${{ matrix.environment }}
@@ -58,7 +69,7 @@ jobs:
         continue-on-error: true
 
       - name: Post plan to PR
-        if: steps.check-creds.outputs.has_creds == 'true' && always()
+        if: steps.check-creds.outputs.has_creds == 'true' && github.event_name == 'pull_request' && always()
         uses: actions/github-script@v7
         with:
           script: |
@@ -110,7 +121,7 @@ jobs:
             }
 
       - name: Post skip notice to PR
-        if: steps.check-creds.outputs.has_creds == 'false'
+        if: steps.check-creds.outputs.has_creds == 'false' && github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
@@ -124,3 +135,10 @@ jobs:
               issue_number: context.issue.number,
               body: body,
             });
+
+      - name: Print plan summary (manual trigger)
+        if: steps.check-creds.outputs.has_creds == 'true' && github.event_name == 'workflow_dispatch' && always()
+        run: |
+          echo "### Plan result: ${{ steps.plan.outcome }}"
+          echo ""
+          cat plan-output.txt
