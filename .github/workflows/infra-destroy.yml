@@ -69,4 +69,8 @@ jobs:
         run: tofu init -no-color
 
       - name: Tofu Destroy
-        run: tofu destroy -auto-approve -no-color
+        run: |
+          tofu destroy -auto-approve -no-color \
+            -var="project_id=${{ vars.GCP_PROJECT_ID }}" \
+            -var="project_number=${{ vars.GCP_PROJECT_NUMBER }}" \
+            -var="github_repo=${{ github.repository }}"

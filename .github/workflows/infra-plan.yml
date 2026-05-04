@@ -83,6 +83,14 @@ jobs:
           workload_identity_provider: ${{ vars.WIF_PROVIDER }}
           service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
 
+      - name: Check for project configuration
+        if: steps.check-creds.outputs.has_creds == 'true'
+        run: |
+          if [ -z "${{ vars.GCP_PROJECT_ID }}" ] || [ -z "${{ vars.GCP_PROJECT_NUMBER }}" ]; then
+            echo "::error::GCP_PROJECT_ID and GCP_PROJECT_NUMBER variables must be set."
+            exit 1
+          fi
+
       - name: Tofu Init
         if: steps.check-creds.outputs.has_creds == 'true'
         run: tofu init -no-color
@@ -91,7 +99,12 @@ jobs:
       - name: Tofu Plan
         if: steps.check-creds.outputs.has_creds == 'true'
         id: plan
-        run: tofu plan -no-color -out=tfplan 2>&1 | tee plan-output.txt
+        run: |
+          tofu plan -no-color -input=false\
+            -var="project_id=${{ vars.GCP_PROJECT_ID }}" \
+            -var="project_number=${{ vars.GCP_PROJECT_NUMBER }}" \
+            -var="github_repo=${{ github.repository }}" \
+            -out=tfplan 2>&1 | tee plan-output.txt
         continue-on-error: true
 
       - name: Post plan to PR
