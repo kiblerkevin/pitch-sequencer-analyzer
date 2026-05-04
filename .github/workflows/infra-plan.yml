@@ -31,7 +31,7 @@ jobs:
       matrix:
         environment: ${{ github.event_name == 'workflow_dispatch' && fromJSON(format('["{0}"]', inputs.environment)) || fromJSON('["dev"]') }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Run Checkov
         id: checkov
@@ -58,7 +58,7 @@ jobs:
       run:
         working-directory: infrastructure/environments/${{ matrix.environment }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup OpenTofu
         uses: opentofu/setup-opentofu@v1

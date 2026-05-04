@@ -52,7 +52,7 @@ jobs:
       run:
         working-directory: infrastructure/environments/${{ inputs.environment }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup OpenTofu
         uses: opentofu/setup-opentofu@v1
