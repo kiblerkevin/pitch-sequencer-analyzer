@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [ -z "${1:-}" ]; then
-  echo "Usage: ./bootstrap.sh <gcp-project-id>"
+  echo "Usage: ./bootstrap.sh pitch-sequence-analyzer"
   exit 1
 fi
 
