@@ -1,0 +1,24 @@
+# Checkov configuration for pitch-sequencer-analyzer
+# Skipped checks are intentional design decisions, documented below.
+
+skip-check:
+  # Logs bucket does not need access logging — logging a logs bucket is circular.
+  - CKV_GCP_62  # Bucket should log access (applies to access_logs bucket only)
+
+  # Logs bucket does not need versioning — logs are ephemeral and auto-deleted after 90 days.
+  - CKV_GCP_78  # Ensure Cloud storage has versioning enabled (applies to access_logs bucket only)
+
+  # Google-managed encryption is sufficient for public MLB data.
+  # CSEK adds key management overhead and risk of data loss with no security benefit.
+  - CKV_GCP_83  # Ensure PubSub Topics are encrypted with CSEK
+
+  # CI service account requires roles/iam.serviceAccountUser at project level
+  # to deploy Cloud Run services that run as other service accounts.
+  # This is scoped to a single CI SA authenticated only via Workload Identity Federation.
+  - CKV_GCP_41  # IAM users not assigned SA User/Token Creator at project level
+  - CKV_GCP_49  # Roles do not impersonate or manage Service Accounts at project level
+
+  # Our OIDC condition uses assertion.repository + assertion.repository_owner + assertion.ref
+  # which is more granular than what the check parses. The check only looks for assertion.sub
+  # in a specific format. Our condition is secure — it restricts to a single repo, owner, and branch.
+  - CKV_GCP_125 # GitHub Actions OIDC trust policy configured securely

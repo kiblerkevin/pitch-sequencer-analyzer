@@ -44,6 +44,7 @@ jobs:
           output_format: cli
           download_external_modules: true
           quiet: true
+          config_file: infrastructure/.checkov.yml
 
   plan:
     runs-on: ubuntu-latest

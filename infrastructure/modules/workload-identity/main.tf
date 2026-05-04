@@ -23,21 +23,89 @@ resource "google_service_account" "ci" {
   display_name = "PSA CI (${var.environment})"
 }
 
-resource "google_project_iam_member" "ci_editor" {
+# Least-privilege roles for CI: tofu plan/apply for the specific services we use.
+
+resource "google_project_iam_member" "ci_storage_admin" {
   project = var.project_id
-  role    = "roles/editor"
+  role    = "roles/storage.admin"
   member  = "serviceAccount:${google_service_account.ci.email}"
 }
 
-resource "google_project_iam_member" "ci_iam_admin" {
+resource "google_project_iam_member" "ci_firestore_admin" {
   project = var.project_id
-  role    = "roles/iam.serviceAccountAdmin"
+  role    = "roles/datastore.owner"
+  member  = "serviceAccount:${google_service_account.ci.email}"
+}
+
+resource "google_project_iam_member" "ci_pubsub_admin" {
+  project = var.project_id
+  role    = "roles/pubsub.admin"
+  member  = "serviceAccount:${google_service_account.ci.email}"
+}
+
+resource "google_project_iam_member" "ci_run_admin" {
+  project = var.project_id
+  role    = "roles/run.admin"
+  member  = "serviceAccount:${google_service_account.ci.email}"
+}
+
+resource "google_project_iam_member" "ci_cloudfunctions_admin" {
+  project = var.project_id
+  role    = "roles/cloudfunctions.admin"
+  member  = "serviceAccount:${google_service_account.ci.email}"
+}
+
+resource "google_project_iam_member" "ci_scheduler_admin" {
+  project = var.project_id
+  role    = "roles/cloudscheduler.admin"
   member  = "serviceAccount:${google_service_account.ci.email}"
 }
 
 resource "google_project_iam_member" "ci_secret_admin" {
   project = var.project_id
   role    = "roles/secretmanager.admin"
+  member  = "serviceAccount:${google_service_account.ci.email}"
+}
+
+resource "google_project_iam_member" "ci_iam_sa_creator" {
+  project = var.project_id
+  role    = "roles/iam.serviceAccountCreator"
+  member  = "serviceAccount:${google_service_account.ci.email}"
+}
+
+resource "google_project_iam_member" "ci_iam_sa_deleter" {
+  project = var.project_id
+  role    = "roles/iam.serviceAccountDeleter"
+  member  = "serviceAccount:${google_service_account.ci.email}"
+}
+
+resource "google_project_iam_member" "ci_sa_user" {
+  project = var.project_id
+  role    = "roles/iam.serviceAccountUser"
+  member  = "serviceAccount:${google_service_account.ci.email}"
+}
+
+resource "google_project_iam_member" "ci_project_iam_admin" {
+  project = var.project_id
+  role    = "roles/resourcemanager.projectIamAdmin"
+  member  = "serviceAccount:${google_service_account.ci.email}"
+}
+
+resource "google_project_iam_member" "ci_wif_admin" {
+  project = var.project_id
+  role    = "roles/iam.workloadIdentityPoolAdmin"
+  member  = "serviceAccount:${google_service_account.ci.email}"
+}
+
+resource "google_project_iam_member" "ci_artifact_registry_admin" {
+  project = var.project_id
+  role    = "roles/artifactregistry.admin"
+  member  = "serviceAccount:${google_service_account.ci.email}"
+}
+
+resource "google_project_iam_member" "ci_service_usage_consumer" {
+  project = var.project_id
+  role    = "roles/serviceusage.serviceUsageConsumer"
   member  = "serviceAccount:${google_service_account.ci.email}"
 }
 
@@ -58,13 +126,14 @@ resource "google_iam_workload_identity_pool_provider" "github" {
   display_name                       = "PSA GitHub Provider (${var.environment})"
 
   attribute_mapping = {
-    "google.subject"       = "assertion.sub"
-    "attribute.actor"      = "assertion.actor"
-    "attribute.repository" = "assertion.repository"
-    "attribute.ref"        = "assertion.ref"
+    "google.subject"             = "assertion.sub"
+    "attribute.actor"            = "assertion.actor"
+    "attribute.repository"       = "assertion.repository"
+    "attribute.repository_owner" = "assertion.repository_owner"
+    "attribute.ref"              = "assertion.ref"
   }
 
-  attribute_condition = "assertion.repository == '${var.github_repo}'"
+  attribute_condition = "assertion.repository == '${var.github_repo}' && assertion.repository_owner == '${split("/", var.github_repo)[0]}' && assertion.ref == 'refs/heads/main' && assertion.sub == 'repo:${var.github_repo}:ref:refs/heads/main'"
 
   oidc {
     issuer_uri = "https://token.actions.githubusercontent.com"

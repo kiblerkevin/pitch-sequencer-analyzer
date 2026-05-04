@@ -6,6 +6,7 @@ variable "environment" {
   type = string
 }
 
+# checkov:skip=CKV_GCP_83:Google-managed encryption is sufficient for public MLB data. CSEK adds key management overhead with no security benefit for this use case.
 resource "google_pubsub_topic" "pitch_data_raw" {
   project = var.project_id
   name    = "psa-${var.environment}-pitch-data-raw"
