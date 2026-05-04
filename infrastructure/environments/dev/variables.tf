@@ -14,3 +14,13 @@ variable "environment" {
   type        = string
   default     = "dev"
 }
+
+variable "project_number" {
+  description = "GCP project number"
+  type        = string
+}
+
+variable "github_repo" {
+  description = "GitHub repository in the format 'owner/repo'"
+  type        = string
+}

@@ -22,10 +22,34 @@ env:
   TOFU_VERSION: "1.9.0"
 
 jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    strategy:
+      matrix:
+        environment: ${{ github.event_name == 'workflow_dispatch' && fromJSON(format('["{0}"]', inputs.environment)) || fromJSON('["dev"]') }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Checkov
+        id: checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: infrastructure/
+          framework: terraform
+          hard_fail_on: HIGH,CRITICAL
+          soft_fail_on: LOW,MEDIUM
+          output_format: cli
+          download_external_modules: true
+          quiet: true
+
   plan:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write
       pull-requests: write
     strategy:
       matrix:
@@ -41,12 +65,12 @@ jobs:
         with:
           tofu-version: ${{ env.TOFU_VERSION }}
 
-      - name: Check for GCP credentials
+      - name: Check for WIF configuration
         id: check-creds
         run: |
-          if [ -z "${{ secrets.GCP_CREDENTIALS }}" ]; then
+          if [ -z "${{ vars.WIF_PROVIDER }}" ] || [ -z "${{ vars.GCP_SERVICE_ACCOUNT }}" ]; then
             echo "has_creds=false" >> $GITHUB_OUTPUT
-            echo "::warning::GCP credentials not configured. Skipping tofu plan."
+            echo "::warning::Workload Identity Federation not configured. Skipping tofu plan."
           else
             echo "has_creds=true" >> $GITHUB_OUTPUT
           fi
@@ -55,7 +79,8 @@ jobs:
         if: steps.check-creds.outputs.has_creds == 'true'
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
 
       - name: Tofu Init
         if: steps.check-creds.outputs.has_creds == 'true'
@@ -127,7 +152,7 @@ jobs:
           script: |
             const body = `### OpenTofu Plan — \`${{ matrix.environment }}\`
 
-            ⚠️ **Skipped** — GCP credentials are not configured. Add the \`GCP_CREDENTIALS\` secret to enable infrastructure planning.`;
+            ⚠️ **Skipped** — Workload Identity Federation not configured. Set \`WIF_PROVIDER\` and \`GCP_SERVICE_ACCOUNT\` variables to enable infrastructure planning.`;
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,

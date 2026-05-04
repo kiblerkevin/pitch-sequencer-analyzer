@@ -64,6 +64,16 @@ jobs:
             echo "ingestion=${{ steps.filter.outputs.ingestion }}" >> $GITHUB_OUTPUT
           fi
 
+  secret-detection:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   lint-frontend:
     needs: detect-changes
     if: needs.detect-changes.outputs.frontend == 'true'
@@ -81,6 +91,8 @@ jobs:
       - run: NODE_ENV=development npm ci
       - run: npx eslint .
       - run: npx prettier --check "src/**/*.{ts,tsx}"
+      - name: Dependency audit
+        run: npm audit --audit-level=high
 
   lint-orchestrator:
     needs: detect-changes
@@ -99,6 +111,8 @@ jobs:
       - run: NODE_ENV=development npm ci
       - run: npm run lint
       - run: npx prettier --check "src/**/*.ts" "test/**/*.ts"
+      - name: Dependency audit
+        run: npm audit --audit-level=high
 
   lint-inference:
     needs: detect-changes
@@ -112,9 +126,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install ruff
+      - run: pip install ruff pip-audit
       - run: ruff check .
       - run: ruff format --check .
+      - name: Dependency audit
+        run: pip-audit -r requirements.txt --severity high
 
   lint-ingestion:
     needs: detect-changes
@@ -128,9 +144,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install ruff
+      - run: pip install ruff pip-audit
       - run: ruff check .
       - run: ruff format --check .
+      - name: Dependency audit
+        run: pip-audit -r requirements.txt --severity high
 
   test-orchestrator:
     needs: lint-orchestrator
@@ -166,8 +184,17 @@ jobs:
         with:
           context: services/frontend
           push: false
+          load: true
+          tags: psa-frontend:ci
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: psa-frontend:ci
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          format: table
 
   build-orchestrator:
     needs: test-orchestrator
@@ -180,8 +207,17 @@ jobs:
         with:
           context: services/orchestrator
           push: false
+          load: true
+          tags: psa-orchestrator:ci
           cache-from: type=gha,scope=orchestrator
           cache-to: type=gha,mode=max,scope=orchestrator
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: psa-orchestrator:ci
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          format: table
 
   build-inference:
     needs: lint-inference
@@ -194,8 +230,17 @@ jobs:
         with:
           context: services/inference
           push: false
+          load: true
+          tags: psa-inference:ci
           cache-from: type=gha,scope=inference
           cache-to: type=gha,mode=max,scope=inference
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: psa-inference:ci
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          format: table
 
   build-ingestion:
     needs: lint-ingestion
@@ -208,5 +253,14 @@ jobs:
         with:
           context: services/ingestion
           push: false
+          load: true
+          tags: psa-ingestion:ci
           cache-from: type=gha,scope=ingestion
           cache-to: type=gha,mode=max,scope=ingestion
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: psa-ingestion:ci
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          format: table

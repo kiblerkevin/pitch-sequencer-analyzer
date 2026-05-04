@@ -25,3 +25,11 @@ output "inference_service_account" {
 output "mlb_api_key_secret_id" {
   value = module.secrets.mlb_api_key_secret_id
 }
+
+output "ci_service_account" {
+  value = module.workload_identity.ci_service_account_email
+}
+
+output "workload_identity_provider" {
+  value = module.workload_identity.workload_identity_provider
+}
