@@ -67,15 +67,10 @@ resource "google_project_iam_member" "ci_secret_admin" {
   member  = "serviceAccount:${google_service_account.ci.email}"
 }
 
-resource "google_project_iam_member" "ci_iam_sa_creator" {
+# checkov:skip=CKV_GCP_49:CI needs to manage IAM policies on service accounts for WIF binding and Cloud Run deployments
+resource "google_project_iam_member" "ci_iam_sa_admin" {
   project = var.project_id
-  role    = "roles/iam.serviceAccountCreator"
-  member  = "serviceAccount:${google_service_account.ci.email}"
-}
-
-resource "google_project_iam_member" "ci_iam_sa_deleter" {
-  project = var.project_id
-  role    = "roles/iam.serviceAccountDeleter"
+  role    = "roles/iam.serviceAccountAdmin"
   member  = "serviceAccount:${google_service_account.ci.email}"
 }
 
