@@ -7,6 +7,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app/ app/
 
-EXPOSE 8080
-
-CMD ["functions-framework", "--target=ingest", "--port=8080", "--source=app/live.py"]
+CMD ["python", "-m", "app.backfill"]

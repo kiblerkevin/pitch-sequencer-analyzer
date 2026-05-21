@@ -11,6 +11,7 @@ skip-check:
   # Google-managed encryption is sufficient for public MLB data.
   # CSEK adds key management overhead and risk of data loss with no security benefit.
   - CKV_GCP_83  # Ensure PubSub Topics are encrypted with CSEK
+  - CKV_GCP_84  # Ensure Artifact Registry Repositories are encrypted with CSEK
 
   # CI service account requires roles/iam.serviceAccountUser at project level
   # to deploy Cloud Run services that run as other service accounts.

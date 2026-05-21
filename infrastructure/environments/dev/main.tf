@@ -44,3 +44,23 @@ module "workload_identity" {
   environment    = var.environment
   github_repo    = var.github_repo
 }
+
+module "artifact_registry_repository" {
+  source = "../../modules/artifact-registry-repository"
+
+  project_id     = var.project_id
+  region         = var.region
+  environment    = var.environment
+  immutable_tags = false
+}
+
+module "cloud_run_job" {
+  source = "../../modules/cloud-run-job"
+
+  project_id            = var.project_id
+  region                = var.region
+  environment           = var.environment
+  bucket_name           = module.gcs.bucket_name
+  repository_url        = module.artifact_registry_repository.repository_url
+  service_account_email = module.iam.ingestion_service_account_email
+}
