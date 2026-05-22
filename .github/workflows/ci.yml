@@ -249,18 +249,36 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
-      - uses: docker/build-push-action@v6
+      - name: Build live ingestion image
+        uses: docker/build-push-action@v6
         with:
           context: services/ingestion
           push: false
           load: true
-          tags: psa-ingestion:ci
-          cache-from: type=gha,scope=ingestion
-          cache-to: type=gha,mode=max,scope=ingestion
-      - name: Trivy image scan
+          tags: psa-ingestion-live:ci
+          cache-from: type=gha,scope=ingestion-live
+          cache-to: type=gha,mode=max,scope=ingestion-live
+      - name: Build backfill image
+        uses: docker/build-push-action@v6
+        with:
+          context: services/ingestion
+          file: services/ingestion/Dockerfile.backfill
+          push: false
+          load: true
+          tags: psa-ingestion-backfill:ci
+          cache-from: type=gha,scope=ingestion-backfill
+          cache-to: type=gha,mode=max,scope=ingestion-backfill
+      - name: Trivy scan - live ingestion
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: psa-ingestion:ci
+          image-ref: psa-ingestion-live:ci
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          format: table
+      - name: Trivy scan - backfill
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: psa-ingestion-backfill:ci
           severity: HIGH,CRITICAL
           exit-code: "1"
           format: table
