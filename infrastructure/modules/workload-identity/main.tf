@@ -15,6 +15,12 @@ variable "github_repo" {
   type        = string
 }
 
+variable "restrict_to_main_branch" {
+  description = "Whether to restrict WIF authentication to the main branch only (use true for staging/prod)"
+  type        = bool
+  default     = false
+}
+
 # --- CI Service Account ---
 
 resource "google_service_account" "ci" {
@@ -128,7 +134,7 @@ resource "google_iam_workload_identity_pool_provider" "github" {
     "attribute.ref"              = "assertion.ref"
   }
 
-  attribute_condition = "assertion.repository == '${var.github_repo}' && assertion.repository_owner == '${split("/", var.github_repo)[0]}' && assertion.ref == 'refs/heads/main' && assertion.sub == 'repo:${var.github_repo}:ref:refs/heads/main'"
+  attribute_condition = var.restrict_to_main_branch ? "assertion.repository == '${var.github_repo}' && assertion.repository_owner == '${split("/", var.github_repo)[0]}' && assertion.ref == 'refs/heads/main'" : "assertion.repository == '${var.github_repo}' && assertion.repository_owner == '${split("/", var.github_repo)[0]}'"
 
   oidc {
     issuer_uri = "https://token.actions.githubusercontent.com"

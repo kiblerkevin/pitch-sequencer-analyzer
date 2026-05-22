@@ -39,10 +39,11 @@ module "secrets" {
 module "workload_identity" {
   source = "../../modules/workload-identity"
 
-  project_id     = var.project_id
-  project_number = var.project_number
-  environment    = var.environment
-  github_repo    = var.github_repo
+  project_id             = var.project_id
+  project_number         = var.project_number
+  environment            = var.environment
+  github_repo            = var.github_repo
+  restrict_to_main_branch = false
 }
 
 module "artifact_registry_repository" {
