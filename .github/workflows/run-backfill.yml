@@ -1,0 +1,45 @@
+---
+name: Run Backfill Job
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to run in"
+        required: true
+        type: choice
+        default: dev
+        options:
+          - dev
+          - prod
+      start_year:
+        description: "Start year for backfill"
+        required: true
+        type: string
+        default: "2022"
+      end_year:
+        description: "End year for backfill"
+        required: true
+        type: string
+        default: "2024"
+
+jobs:
+  execute:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Execute backfill job
+        run: |
+          gcloud run jobs execute psa-${{ inputs.environment }}-backfill-job \
+            --region ${{ vars.GCP_REGION }} \
+            --args="--bucket,psa-${{ inputs.environment }}-data-lake-${{ vars.GCP_PROJECT_ID }},--start-year,${{ inputs.start_year }},--end-year,${{ inputs.end_year }}" \
+            --wait
