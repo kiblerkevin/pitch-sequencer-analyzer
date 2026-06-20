@@ -1,4 +1,4 @@
-.PHONY: lint format type-check run
+.PHONY: lint format type-check run-live run-backfill
 
 lint:
 	ruff check .
@@ -9,5 +9,8 @@ format:
 type-check:
 	mypy app/
 
-run:
-	functions-framework --target=ingest --port=8080 --source=app/main.py
+run-live:
+	functions-framework --target=ingest --port=8080 --source=app/live.py
+
+run-backfill:
+	python -m app.backfill

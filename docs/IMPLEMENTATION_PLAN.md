@@ -68,38 +68,54 @@ Effort estimates assume a small team of contributors working part-time.
 
 **Depends on:** Phase 1 complete.
 
-### 2.1 Historical Data Backfill
-- [ ] Implement backfill mode in the ingestion function:
-  - Accepts a `--backfill` flag or environment variable.
-  - Uses `pybaseball.statcast()` to pull 3 years of historical pitch data.
+### 2.1 Historical Data Backfill (Cloud Run Job)
+- [ ] Create `services/ingestion/app/backfill.py` entry point:
+  - Uses `pybaseball.statcast()` to pull historical pitch data by year.
+  - Accepts `START_YEAR` and `END_YEAR` environment variables (default: last 3 years).
   - Writes CSV files to `gs://{bucket}/historical/{YYYY}/statcast_{YYYY}.csv`.
+  - Logs progress per year (structured JSON).
+- [ ] Create a separate Dockerfile target or entry point for the backfill job:
+  - `CMD ["python", "-m", "app.backfill"]`
+- [ ] Add OpenTofu module `modules/cloud-run-job/` for the backfill:
+  - Cloud Run Job (not a service — runs to completion).
+  - Uses the ingestion service account (GCS write only).
+  - No Cloud Scheduler — triggered manually via console, gcloud, or GitHub Actions.
+  - Timeout: 30 minutes.
+  - Memory: 2Gi (Statcast DataFrames are large).
+- [ ] Add a `workflow_dispatch` GitHub Actions workflow to trigger the backfill job on demand.
 - [ ] Run backfill against dev environment and verify data in GCS.
 
-**Acceptance criteria:** 3 years of Statcast CSVs are in the data lake. Files are readable and contain expected columns (pitch type, velocity, zone, outcome, batter/pitcher IDs, game state fields).
+**Acceptance criteria:** 3 years of Statcast CSVs are in the data lake. Files are readable and contain expected columns (pitch type, velocity, zone, outcome, batter/pitcher IDs, game state fields). Job completes within 30 minutes.
 
 ### 2.2 Live Ingestion Function
-- [ ] Implement the Cloud Function entry point:
+- [ ] Create `services/ingestion/app/live.py` entry point:
   - Uses `pybaseball` / MLB Stats API to fetch current game state.
   - Detects if a Cubs game is active. No-ops if no active game.
   - Dual-write:
     - Publishes raw JSON to `pitch-data-raw` Pub/Sub topic.
     - Extracts current play state and writes to `games/{gameId}` and `games/{gameId}/atBats/{atBatId}` in Firestore (see [DATA_MODELS.md](./DATA_MODELS.md)).
 - [ ] Implement idempotency — duplicate polls for the same pitch should not create duplicate Firestore documents.
+- [ ] Create shared utilities in `services/ingestion/app/common/`:
+  - GCS client wrapper.
+  - Firestore client wrapper.
+  - Pub/Sub client wrapper.
+  - Structured logging setup.
 
 **Acceptance criteria:** During a live Cubs game, Firestore documents update every 15 seconds with current game and at-bat state. Raw JSON appears in GCS under `raw/{YYYY}/{MM}/{DD}/{gameId}/`.
 
 ### 2.3 Cloud Scheduler & Pub/Sub Subscriber
 - [ ] Add OpenTofu modules:
-  - `modules/scheduler/` — Cloud Scheduler job triggering the ingestion function every 15 seconds.
-  - `modules/cloud-function/` — Deploy the ingestion function.
+  - `modules/scheduler/` — Cloud Scheduler job triggering the live ingestion function every 15 seconds.
+  - `modules/cloud-function/` — Deploy the live ingestion function.
 - [ ] Implement Pub/Sub subscriber Cloud Function that writes raw JSON from the topic to GCS.
 - [ ] Deploy to dev and run end-to-end during a live game (or with fixture data).
 
 **Acceptance criteria:** Cloud Scheduler triggers the function on schedule. Pub/Sub messages are consumed and raw JSON lands in GCS. No duplicate writes.
 
 ### 2.4 Ingestion Tests
-- [ ] Unit tests for data extraction and transformation logic.
-- [ ] Integration tests with mocked pybaseball responses, Firestore emulator, and Pub/Sub emulator.
+- [ ] Unit tests for data extraction and transformation logic (shared by both entry points).
+- [ ] Integration tests for live ingestion with mocked pybaseball responses, Firestore emulator, and Pub/Sub emulator.
+- [ ] Integration tests for backfill with mocked pybaseball responses and mocked GCS client.
 - [ ] Add test fixtures in `services/ingestion/tests/fixtures/`.
 
 **Acceptance criteria:** 80%+ line coverage. Tests pass in CI.
