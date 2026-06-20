@@ -10,7 +10,6 @@ on:
         type: choice
         options:
           - dev
-          - staging
           - prod
       confirm:
         description: "Type the environment name to confirm destruction"
