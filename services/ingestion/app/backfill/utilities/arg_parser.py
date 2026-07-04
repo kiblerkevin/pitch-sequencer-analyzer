@@ -20,7 +20,8 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
-        "--end-year", type=int, help="End year for multi-year backfill (required with --start-year)"
+        "--end-year", type=int, help="""End year for multi-year backfill 
+        (required with --start-year)"""
     )
 
     return parser.parse_args()
