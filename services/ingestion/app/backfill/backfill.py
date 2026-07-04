@@ -33,9 +33,12 @@ def main() -> None:
     args = parse_args()
     bucket = args.bucket
 
+    failed_dates = []
     if args.daily:
         yesterday = date.today() - timedelta(days=1)
-        logger.info(f"Daily ingestion: {yesterday} -> gs://{bucket}/{_gcs_path(yesterday)}")
+        logger.info(
+            f"Daily ingestion: {yesterday} -> gs://{bucket}/{_gcs_path(yesterday)}"
+        )
         failed_dates = _ingest_date(bucket, yesterday)
 
     elif args.date:
@@ -51,22 +54,22 @@ def main() -> None:
         if start_year > end_year:
             raise ValueError("--start-year must be less than or equal to --end-year")
 
-        logger.info(f"Starting backfill: {start_year}-{end_year} -> gs://{bucket}/historical/")
+        logger.info(
+            f"Starting backfill: {start_year}-{end_year} -> gs://{bucket}/historical/"
+        )
 
         failed_dates = []
         for year in range(start_year, end_year + 1):
-            season_start = date(year, 1, 1)
-            season_end = date(year, 12, 31)
-            current = season_start
-            while current <= season_end:
+            current = date(year, 1, 1)
+            while current <= date(year, 12, 31):
                 failed_dates.extend(_ingest_date(bucket, current))
                 current += timedelta(days=1)
 
-    logger.info(f"Backfill process complete for {bucket}.")
+        if failed_dates:
+            logger.error(f"Failed to process dates: {failed_dates}")
+            raise SystemExit(1)
 
-    if failed_dates:
-        logger.error(f"Failed to process dates: {failed_dates}")
-        raise SystemExit(1)
+    logger.info("Backfill process complete.")
 
 
 if __name__ == "__main__":

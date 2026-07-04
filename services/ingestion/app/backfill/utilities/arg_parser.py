@@ -9,9 +9,7 @@ def parse_args() -> argparse.Namespace:
     )
 
     mode = parser.add_mutually_exclusive_group(required=True)
-    mode.add_argument(
-        "--daily", action="store_true", help="Ingest yesterday's data"
-    )
+    mode.add_argument("--daily", action="store_true", help="Ingest yesterday's data")
     mode.add_argument(
         "--date", type=str, help="Ingest a specific date (YYYY-MM-DD)"
     )
@@ -20,8 +18,9 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
-        "--end-year", type=int, help="""End year for multi-year backfill
-        (required with --start-year)"""
+        "--end-year",
+        type=int,
+        help="End year for multi-year backfill (required with --start-year)",
     )
 
     return parser.parse_args()
