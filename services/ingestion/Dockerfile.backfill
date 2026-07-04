@@ -4,7 +4,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir --target=/app/packages -r requirements.txt
 
-FROM gcr.io/distroless/python3-debian12
+FROM gcr.io/distroless/python3-debian13
 
 WORKDIR /app
 COPY --from=builder /app/packages /app/packages
