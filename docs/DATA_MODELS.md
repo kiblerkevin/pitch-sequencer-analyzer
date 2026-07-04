@@ -54,9 +54,11 @@ gs://pitch-sequencer-data/
 │   └── {YYYY}/{MM}/{DD}/
 │       └── {gameId}/
 │           └── {timestamp}.json
-├── historical/                # Bulk Statcast CSVs for training
+├── historical/                # Statcast CSVs for model training (backfill + daily)
 │   └── {YYYY}/
-│       └── statcast_{YYYY}.csv
+│       └── {MM}/
+│           └── {DD}/
+│               └── statcast_{YYYY}-{MM}-{DD}.csv
 └── models/                    # Model registry
     └── {model_name}/
         └── {version}/
