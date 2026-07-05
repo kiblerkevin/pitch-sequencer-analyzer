@@ -15,7 +15,6 @@ on:
         default: dev
         options:
           - dev
-          - staging
           - prod
 
 env:
@@ -174,6 +173,14 @@ jobs:
               issue_number: context.issue.number,
               body: body,
             });
+
+      - name: Upload plan artifact
+        if: steps.check-creds.outputs.has_creds == 'true' && steps.plan.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ matrix.environment }}
+          path: infrastructure/environments/${{ matrix.environment }}/tfplan
+          retention-days: 7
 
       - name: Print plan summary (manual trigger)
         if: steps.check-creds.outputs.has_creds == 'true' && github.event_name == 'workflow_dispatch' && always()

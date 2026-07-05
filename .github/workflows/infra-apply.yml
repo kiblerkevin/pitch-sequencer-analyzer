@@ -1,0 +1,55 @@
+---
+name: Infrastructure Apply
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to apply"
+        required: true
+        type: choice
+        default: dev
+        options:
+          - dev
+          - prod
+
+env:
+  TOFU_VERSION: "1.9.0"
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: infrastructure/environments/${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup OpenTofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu-version: ${{ env.TOFU_VERSION }}
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Download plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-${{ inputs.environment }}
+          path: infrastructure/environments/${{ inputs.environment }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.inputs.plan_run_id || github.run_id }}
+
+      - name: Tofu Init
+        run: tofu init -no-color
+
+      - name: Tofu Apply
+        run: tofu apply -no-color -input=false tfplan

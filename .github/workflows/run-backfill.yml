@@ -1,0 +1,79 @@
+---
+name: Run Backfill Job
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to run in"
+        required: true
+        type: choice
+        default: dev
+        options:
+          - dev
+          - prod
+      mode:
+        description: "Ingestion mode"
+        required: true
+        type: choice
+        default: daily
+        options:
+          - daily
+          - date
+          - backfill
+      date:
+        description: "Specific date to ingest (YYYY-MM-DD, required for 'date' mode)"
+        required: false
+        type: string
+      start_year:
+        description: "Start year (required for 'backfill' mode)"
+        required: false
+        type: string
+      end_year:
+        description: "End year (required for 'backfill' mode)"
+        required: false
+        type: string
+
+jobs:
+  execute:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Validate inputs
+        run: |
+          if [ "${{ inputs.mode }}" = "date" ] && [ -z "${{ inputs.date }}" ]; then
+            echo "::error::'date' mode requires the 'date' input (YYYY-MM-DD)"
+            exit 1
+          fi
+          if [ "${{ inputs.mode }}" = "backfill" ] && ( [ -z "${{ inputs.start_year }}" ] || [ -z "${{ inputs.end_year }}" ] ); then
+            echo "::error::'backfill' mode requires both 'start_year' and 'end_year'"
+            exit 1
+          fi
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Build job args
+        id: args
+        run: |
+          BUCKET="psa-${{ inputs.environment }}-data-lake-${{ vars.GCP_PROJECT_ID }}"
+          if [ "${{ inputs.mode }}" = "daily" ]; then
+            echo "args=--bucket,${BUCKET},--daily" >> $GITHUB_OUTPUT
+          elif [ "${{ inputs.mode }}" = "date" ]; then
+            echo "args=--bucket,${BUCKET},--date,${{ inputs.date }}" >> $GITHUB_OUTPUT
+          else
+            echo "args=--bucket,${BUCKET},--start-year,${{ inputs.start_year }},--end-year,${{ inputs.end_year }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Execute backfill job
+        run: |
+          gcloud run jobs execute psa-${{ inputs.environment }}-backfill-job \
+            --region ${{ vars.GCP_REGION }} \
+            --args="${{ steps.args.outputs.args }}" \
+            --wait

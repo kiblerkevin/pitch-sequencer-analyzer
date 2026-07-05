@@ -137,6 +137,7 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: "1"
           format: table
+          trivyignores: .trivyignore
 
   lint-ingestion:
     needs: detect-changes
@@ -161,6 +162,7 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: "1"
           format: table
+          trivyignores: .trivyignore
 
   test-orchestrator:
     needs: lint-orchestrator
@@ -207,6 +209,7 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: "1"
           format: table
+          trivyignores: .trivyignore
 
   build-orchestrator:
     needs: test-orchestrator
@@ -230,6 +233,7 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: "1"
           format: table
+          trivyignores: .trivyignore
 
   build-inference:
     needs: lint-inference
@@ -253,6 +257,7 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: "1"
           format: table
+          trivyignores: .trivyignore
 
   build-ingestion:
     needs: lint-ingestion
@@ -287,6 +292,7 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: "1"
           format: table
+          trivyignores: .trivyignore
       - name: Trivy scan - backfill
         uses: aquasecurity/trivy-action@master
         with:
@@ -294,3 +300,4 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: "1"
           format: table
+          trivyignores: .trivyignore
