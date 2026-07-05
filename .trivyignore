@@ -1,0 +1,26 @@
+# Debian 13.5 base image CVEs pending upstream fixes
+# Suppress until patched images are available
+
+# gzip: global buffer overflow in LZH decompression
+CVE-2026-41992
+
+# libacl1: symlink traversal privilege escalation
+CVE-2026-54369
+
+# ncurses: buffer overflow leading to arbitrary code execution
+CVE-2025-69720
+
+# perl-base: path traversal via crafted symlinks
+CVE-2026-42496
+
+# perl-base: heap buffer overflow in regex compilation (32-bit)
+CVE-2026-8376
+
+# perl-Archive-Tar: arbitrary file modification via hardlinks
+CVE-2026-42497
+
+# perl-IO-Compress: arbitrary code execution via output glob
+CVE-2026-48962
+
+# perl-Archive-Tar: DoS via crafted tar header
+CVE-2026-9538
