@@ -1,10 +1,10 @@
-FROM python:3.14-slim-trixie AS builder
+FROM python:3.14-slim AS builder
 
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir --target=/app/packages -r requirements.txt
 
-FROM python:3.14-slim-trixie
+FROM python:3.14-slim
 
 WORKDIR /app
 COPY --from=builder /app/packages /app/packages
