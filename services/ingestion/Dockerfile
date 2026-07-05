@@ -1,10 +1,10 @@
-FROM python:3.12-slim-trixie AS builder
+FROM python:3.14-slim-trixie AS builder
 
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir --target=/app/packages -r requirements.txt
 
-FROM gcr.io/distroless/python3-debian13
+FROM python:3.14-slim-trixie
 
 WORKDIR /app
 COPY --from=builder /app/packages /app/packages
