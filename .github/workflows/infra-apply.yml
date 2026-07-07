@@ -12,6 +12,10 @@ on:
         options:
           - dev
           - prod
+      plan_run_id:
+        description: "Run ID of the infra-plan workflow (find in the plan run URL)"
+        required: true
+        type: string
 
 env:
   TOFU_VERSION: "1.9.0"
@@ -46,7 +50,7 @@ jobs:
           name: tfplan-${{ inputs.environment }}
           path: infrastructure/environments/${{ inputs.environment }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.inputs.plan_run_id || github.run_id }}
+          run-id: ${{ inputs.plan_run_id }}
 
       - name: Tofu Init
         run: tofu init -no-color
