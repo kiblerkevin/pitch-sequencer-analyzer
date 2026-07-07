@@ -25,9 +25,10 @@ variable "service_account_email" {
 }
 
 resource "google_cloud_run_v2_job" "backfill" {
-  name     = "psa-${var.environment}-backfill-job"
-  location = var.region
-  project  = var.project_id
+  name                = "psa-${var.environment}-backfill-job"
+  location            = var.region
+  project             = var.project_id
+  deletion_protection = false
 
   template {
     template {
@@ -47,9 +48,10 @@ resource "google_cloud_run_v2_job" "backfill" {
 }
 
 resource "google_cloud_run_v2_job" "daily_ingestion" {
-  name     = "psa-${var.environment}-daily-ingestion-job"
-  location = var.region
-  project  = var.project_id
+  name                = "psa-${var.environment}-daily-ingestion-job"
+  location            = var.region
+  project             = var.project_id
+  deletion_protection = false
 
   template {
     template {
