@@ -24,3 +24,9 @@ variable "github_repo" {
   description = "GitHub repository in the format 'owner/repo'"
   type        = string
 }
+
+variable "image_tag" {
+  description = "Image tag to deploy for the backfill jobs"
+  type        = string
+  default     = "latest"
+}

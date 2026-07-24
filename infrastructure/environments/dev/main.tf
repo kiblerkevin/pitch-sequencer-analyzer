@@ -64,4 +64,5 @@ module "cloud_run_job" {
   bucket_name           = module.gcs.bucket_name
   repository_url        = module.artifact_registry_repository.repository_url
   service_account_email = module.iam.ingestion_service_account_email
+  image_tag             = var.image_tag
 }

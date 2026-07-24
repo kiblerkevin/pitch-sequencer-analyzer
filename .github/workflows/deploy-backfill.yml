@@ -12,11 +12,18 @@ on:
         options:
           - dev
           - prod
+      image_tag:
+        description: "Image tag to deploy (defaults to the commit SHA)"
+        required: false
+        type: string
+        default: ""
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
+    env:
+      IMAGE_TAG: ${{ inputs.image_tag || github.sha }}
     permissions:
       contents: read
       id-token: write
@@ -40,4 +47,16 @@ jobs:
           push: true
           tags: |
             ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/psa-${{ inputs.environment }}-backfill/backfill:latest
-            ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/psa-${{ inputs.environment }}-backfill/backfill:${{ github.sha }}
+            ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/psa-${{ inputs.environment }}-backfill/backfill:${{ env.IMAGE_TAG }}
+
+      - name: Update Cloud Run jobs to use the versioned image
+        run: |
+          gcloud run jobs update psa-${{ inputs.environment }}-backfill-job \
+            --image=${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/psa-${{ inputs.environment }}-backfill/backfill:${{ env.IMAGE_TAG }} \
+            --region=${{ vars.GCP_REGION }} \
+            --project=${{ vars.GCP_PROJECT_ID }}
+
+          gcloud run jobs update psa-${{ inputs.environment }}-daily-ingestion-job \
+            --image=${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/psa-${{ inputs.environment }}-backfill/backfill:${{ env.IMAGE_TAG }} \
+            --region=${{ vars.GCP_REGION }} \
+            --project=${{ vars.GCP_PROJECT_ID }}

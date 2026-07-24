@@ -24,6 +24,12 @@ variable "service_account_email" {
   type        = string
 }
 
+variable "image_tag" {
+  description = "Image tag to deploy for the backfill jobs"
+  type        = string
+  default     = "latest"
+}
+
 resource "google_cloud_run_v2_job" "backfill" {
   name                = "psa-${var.environment}-backfill-job"
   location            = var.region
@@ -33,7 +39,7 @@ resource "google_cloud_run_v2_job" "backfill" {
   template {
     template {
       containers {
-        image = "${var.repository_url}/backfill:latest"
+        image = "${var.repository_url}/backfill:${var.image_tag}"
         args  = ["--bucket", var.bucket_name]
         resources {
           limits = {
@@ -56,7 +62,7 @@ resource "google_cloud_run_v2_job" "daily_ingestion" {
   template {
     template {
       containers {
-        image = "${var.repository_url}/backfill:latest"
+        image = "${var.repository_url}/backfill:${var.image_tag}"
         args  = ["--bucket", var.bucket_name, "--daily"]
         resources {
           limits = {
