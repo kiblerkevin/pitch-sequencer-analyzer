@@ -23,12 +23,23 @@ def upload_dataframe_to_gcs(
 ) -> None:
     """Uploads data to a GCS bucket."""
     try:
+        logger.info(
+            "Uploading dataframe to GCS",
+            extra={"bucket": bucket_name, "destination": destination_blob_name, "rows": len(data) if data is not None else None},
+        )
         storage_client = __get_storage_client()
         bucket = storage_client.bucket(bucket_name)
         blob = bucket.blob(destination_blob_name)
         # Write the DataFrame in chunks to avoid memory issues with large datasets
         with blob.open("w", content_type="text/csv") as f:
             data.to_csv(f, index=False)
-    except Exception as e:
-        logger.error(f"Error uploading to GCS bucket {bucket_name}: {e}")
+        logger.info(
+            "GCS upload completed",
+            extra={"bucket": bucket_name, "destination": destination_blob_name},
+        )
+    except Exception:
+        logger.exception(
+            "GCS upload failed",
+            extra={"bucket": bucket_name, "destination": destination_blob_name},
+        )
         raise

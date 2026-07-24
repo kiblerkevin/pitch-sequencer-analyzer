@@ -1,4 +1,5 @@
 import logging
+import traceback
 from datetime import date, timedelta
 
 from app.backfill.clients.pybaseball import fetch_statcast_data
@@ -17,11 +18,20 @@ def _ingest_date(bucket: str, d: date) -> list[date]:
     failed_dates = []
     try:
         date_str = d.isoformat()
-        logger.info(f"Processing {date_str}...")
+        destination = _gcs_path(d)
+        logger.info("Starting ingestion", extra={"date": date_str, "bucket": bucket, "destination": destination})
         data = fetch_statcast_data(date_str, date_str)
-        upload_dataframe_to_gcs(bucket, _gcs_path(d), data)
+        logger.info(
+            "Fetched Statcast data",
+            extra={"date": date_str, "rows": len(data) if data is not None else None},
+        )
+        upload_dataframe_to_gcs(bucket, destination, data)
+        logger.info("Completed ingestion", extra={"date": date_str, "destination": destination})
     except Exception as e:
-        logger.error(f"Failed to ingest data for {d}: {e}")
+        logger.exception(
+            "Failed to ingest data",
+            extra={"date": d.isoformat(), "bucket": bucket, "destination": _gcs_path(d)},
+        )
         failed_dates.append(d)
         raise
 
@@ -70,6 +80,14 @@ def main() -> None:
             raise SystemExit(1)
 
     logger.info("Backfill process complete.")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception:
+        logger.exception("Backfill process crashed")
+        raise
 
 
 if __name__ == "__main__":
