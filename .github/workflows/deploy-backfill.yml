@@ -44,6 +44,7 @@ jobs:
         with:
           context: services/ingestion
           file: services/ingestion/Dockerfile.backfill
+          platforms: linux/amd64
           push: true
           tags: |
             ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/psa-${{ inputs.environment }}-backfill/backfill:latest
