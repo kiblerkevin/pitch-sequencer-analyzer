@@ -56,7 +56,7 @@ module "artifact_registry_repository" {
 }
 
 module "cloud_run_job" {
-  source = "../../modules/cloud-run-job"
+  source = "../../modules/cloud-run-backfill"
 
   project_id            = var.project_id
   region                = var.region
@@ -68,13 +68,14 @@ module "cloud_run_job" {
 }
 
 module "cloud_run_reference_job" {
-  source = "../../modules/cloud-run-job"
+  source = "../../modules/cloud-run-reference"
 
-  project_id            = var.project_id
-  region                = var.region
-  environment           = var.environment
-  bucket_name           = module.gcs.bucket_name
-  repository_url        = module.artifact_registry_repository.reference_repository_url
-  service_account_email = module.iam.ingestion_service_account_email
-  image_tag             = var.reference_image_tag
+  project_id                      = var.project_id
+  region                          = var.region
+  environment                     = var.environment
+  bucket_name                     = module.gcs.bucket_name
+  repository_url                  = module.artifact_registry_repository.reference_repository_url
+  service_account_email           = module.iam.ingestion_service_account_email
+  scheduler_service_account_email = module.cloud_run_job.scheduler_service_account_email
+  image_tag                       = var.reference_image_tag
 }
