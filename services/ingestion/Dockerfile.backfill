@@ -12,5 +12,6 @@ COPY app/ app/
 
 ENV PYTHONPATH=/app/packages
 ENV PYTHONUNBUFFERED=1
+ENV HOME=/tmp
 
 CMD ["python3", "-m", "app.backfill"]
