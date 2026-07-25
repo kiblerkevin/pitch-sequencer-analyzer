@@ -30,3 +30,9 @@ variable "image_tag" {
   type        = string
   default     = "latest"
 }
+
+variable "reference_image_tag" {
+  description = "Image tag to deploy for the reference job"
+  type        = string
+  default     = "latest"
+}

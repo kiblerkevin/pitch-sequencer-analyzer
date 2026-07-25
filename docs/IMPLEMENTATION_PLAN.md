@@ -112,10 +112,22 @@ Effort estimates assume a small team of contributors working part-time.
 
 **Acceptance criteria:** Cloud Scheduler triggers the function on schedule. Pub/Sub messages are consumed and raw JSON lands in GCS. No duplicate writes.
 
-### 2.4 Ingestion Tests
+### 2.5 Reference Data Backfill (MLB Stats API)
+- [ ] Create `services/ingestion/app/backfill/reference.py` entry point:
+  - Fetches player roster data from the MLB Stats API (`statsapi.mlb.com/api/v1/sports/1/players`) for all active and historical players.
+  - Fetches umpire-game mappings from the MLB Stats API (`/api/v1/game/{gamePk}/boxscore`) covering the same date range as the Statcast backfill.
+  - Fetches Cubs schedule data from the MLB Stats API (`/api/v1/schedule`) for current and upcoming seasons.
+  - Writes output as JSON to GCS under `reference/players/`, `reference/umpires/`, and `reference/schedule/`.
+- [ ] Cache player and umpire lookups in GCS — only fetch deltas on subsequent runs.
+- [ ] Extend the daily ingestion function (Phase 2.2) to refresh schedule and append new umpire-game mappings after each game.
+
+**Acceptance criteria:** Player name/handedness/position lookup table is in GCS and covers all batter/pitcher IDs present in the Statcast backfill. Umpire-game mapping covers the same date range. Schedule data is current.
+
+### 2.6 Ingestion Tests
 - [ ] Unit tests for data extraction and transformation logic (shared by both entry points).
 - [ ] Integration tests for live ingestion with mocked pybaseball responses, Firestore emulator, and Pub/Sub emulator.
 - [ ] Integration tests for backfill with mocked pybaseball responses and mocked GCS client.
+- [ ] Integration tests for reference data backfill with mocked MLB Stats API responses.
 - [ ] Add test fixtures in `services/ingestion/tests/fixtures/`.
 
 **Acceptance criteria:** 80%+ line coverage. Tests pass in CI.
@@ -128,13 +140,16 @@ Effort estimates assume a small team of contributors working part-time.
 
 **Estimated effort:** 3–4 weeks
 
-**Depends on:** Phase 2.1 (historical data) complete. Can overlap with Phase 2.2–2.4.
+**Depends on:** Phase 2.1 and 2.5 (historical Statcast and reference data) complete. Can overlap with Phase 2.2–2.6.
 
 ### 3.1 Feature Engineering Pipeline
 - [ ] Create `services/inference/features/` module with feature extraction functions:
-  - Game state features: count pressure, baserunners bitmask, fatigue factor, score leverage.
-  - Pitcher sequencing features: pitch type/velocity history, location, tendencies.
-  - Batter tendency features: hitter profile, pitch-specific tendencies, plate discipline.
+  - Game state features: count pressure, baserunners bitmask, fatigue factor, score leverage, `home_win_exp` (game pressure), `delta_run_exp` (leverage index proxy).
+  - Pitcher sequencing features: pitch type/velocity history, location, tendencies, velocity trend within at-bat (fatigue signal), pitch type frequency to current batter in current at-bat, `spin_axis` + `release_extension` (pitch tunneling), `n_thruorder_pitcher` (times through the order).
+  - Batter tendency features: hitter profile, pitch-specific tendencies, plate discipline, `bat_speed` + `swing_length` (aggressiveness — populated in 2024+ data).
+  - Fielding context features: `if_fielding_alignment`, `of_fielding_alignment` (shift data for outcome model).
+  - Umpire tendency features: called strike zone bias by home plate umpire (derived from umpire-game mapping — see Phase 2.5).
+  - Derived features: `pitcherPitchCount` (aggregated from `pitch_number` across all at-bats for the pitcher in the game — not directly in Statcast).
 - [ ] Build a pipeline that reads historical CSVs from GCS and produces a feature matrix.
 - [ ] Unit test each feature function with known inputs/outputs.
 
@@ -320,7 +335,7 @@ Effort estimates assume a small team of contributors working part-time.
 **Acceptance criteria:** Stats display and update on pitcher/batter changes.
 
 ### 6.7 No Active Game State
-- [ ] When no Cubs game is active, display next scheduled game date/time and opponent.
+- [ ] When no Cubs game is active, display next scheduled game date/time and opponent (sourced from schedule reference data in GCS — see Phase 2.5).
 - [ ] Display previous game summary if available.
 
 **Acceptance criteria:** App handles the no-game state gracefully instead of showing an empty or broken UI.
@@ -352,6 +367,7 @@ Effort estimates assume a small team of contributors working part-time.
 
 ### 7.1 Game State Input Form
 - [ ] Inputs for: pitcher (dropdown), batter (dropdown), count, outs, runners, inning, score.
+  - Pitcher and batter dropdowns populated from the player reference data in GCS (see Phase 2.5).
 - [ ] Pitch sequence builder — add/remove pitches with type, velocity, zone.
 - [ ] Form validation.
 
@@ -476,7 +492,7 @@ Effort estimates assume a small team of contributors working part-time.
 | Phase | Description | Effort | Depends On |
 |---|---|---|---|
 | 1 | Project Scaffolding & Infrastructure Foundation | 1–2 weeks | — |
-| 2 | Data Ingestion Pipeline | 2–3 weeks | Phase 1 |
+| 2 | Data Ingestion Pipeline | 3–4 weeks | Phase 1 |
 | 3 | Model Development & Training | 3–4 weeks | Phase 2.1 |
 | 4 | Inference Service | 2 weeks | Phase 3.2, 3.3 |
 | 5 | Orchestration Layer | 2–3 weeks | Phase 4, Phase 2.2 |

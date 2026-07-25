@@ -27,6 +27,17 @@ resource "google_artifact_registry_repository" "backfill" {
   }
 }
 
+resource "google_artifact_registry_repository" "reference" {
+  project       = var.project_id
+  location      = var.region
+  repository_id = "psa-${var.environment}-reference"
+  format        = "DOCKER"
+
+  docker_config {
+    immutable_tags = var.immutable_tags
+  }
+}
+
 output "repository_id" {
   description = "Artifact Registry Repository ID"
   value = google_artifact_registry_repository.backfill.repository_id
@@ -35,4 +46,9 @@ output "repository_id" {
 output "repository_url" {
   description = "Artifact Registry Repository URL"
   value = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.backfill.repository_id}"
+}
+
+output "reference_repository_url" {
+  description = "Artifact Registry Repository URL for the reference image"
+  value = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.reference.repository_id}"
 }

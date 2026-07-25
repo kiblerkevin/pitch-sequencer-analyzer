@@ -66,3 +66,15 @@ module "cloud_run_job" {
   service_account_email = module.iam.ingestion_service_account_email
   image_tag             = var.image_tag
 }
+
+module "cloud_run_reference_job" {
+  source = "../../modules/cloud-run-job"
+
+  project_id            = var.project_id
+  region                = var.region
+  environment           = var.environment
+  bucket_name           = module.gcs.bucket_name
+  repository_url        = module.artifact_registry_repository.reference_repository_url
+  service_account_email = module.iam.ingestion_service_account_email
+  image_tag             = var.reference_image_tag
+}

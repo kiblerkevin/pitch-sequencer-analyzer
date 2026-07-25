@@ -3,8 +3,7 @@ import os
 
 
 def parse_args() -> argparse.Namespace:
-    """Parse command-line arguments for the backfill job."""
-    parser = argparse.ArgumentParser(description="Backfill historical Statcast data")
+    parser = argparse.ArgumentParser(description="MLB data ingestion job")
     parser.add_argument(
         "--bucket", type=str, default=os.environ.get("GCS_BUCKET"), help="GCS bucket for output"
     )
@@ -12,9 +11,7 @@ def parse_args() -> argparse.Namespace:
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--daily", action="store_true", help="Ingest yesterday's data")
     mode.add_argument("--date", type=str, help="Ingest a specific date (YYYY-MM-DD)")
-    mode.add_argument(
-        "--start-year", type=int, help="Start year for multi-year backfill"
-    )
+    mode.add_argument("--start-year", type=int, help="Start year for multi-year backfill")
 
     parser.add_argument(
         "--end-year",

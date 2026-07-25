@@ -2,7 +2,7 @@ import logging
 from datetime import date, timedelta
 
 from app.backfill.clients.pybaseball import fetch_statcast_data
-from app.backfill.utilities.arg_parser import parse_args
+from app.common.utilities.arg_parser import parse_args
 from app.common.clients.gcs_client import upload_dataframe_to_gcs
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
