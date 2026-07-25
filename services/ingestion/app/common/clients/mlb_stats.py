@@ -30,9 +30,13 @@ def fetch_all_players(start_year: int = 2016) -> list[dict]:
     return list(seen.values())
 
 
+_ALL_GAME_TYPES = "R,P,F,D,L,W,C,S"
+_OFFICIAL_GAME_TYPES = "R,P,F,D,L,W"
+
+
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=2, min=4, max=30), before_sleep=before_sleep_log(logger, logging.WARNING))
-def fetch_schedule(start_date: date, end_date: date) -> list[dict]:
-    """Fetch MLB schedule for all teams for the given date range."""
+def fetch_schedule(start_date: date, end_date: date, game_types: str = _ALL_GAME_TYPES) -> list[dict]:
+    """Fetch MLB schedule for the given date range and game types."""
     try:
         logger.info("Fetching schedule", extra={"start_date": start_date.isoformat(), "end_date": end_date.isoformat()})
         response = requests.get(
@@ -41,7 +45,7 @@ def fetch_schedule(start_date: date, end_date: date) -> list[dict]:
                 "sportId": 1,
                 "startDate": start_date.isoformat(),
                 "endDate": end_date.isoformat(),
-                "gameType": "R,P,F,D,L,W,C,S",
+                "gameType": game_types,
             },
             timeout=30,
         )

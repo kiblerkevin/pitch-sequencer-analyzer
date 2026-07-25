@@ -1,7 +1,7 @@
 import logging
 from datetime import date, timedelta
 
-from app.common.clients.mlb_stats import fetch_all_players, fetch_schedule, fetch_umpires_for_game
+from app.common.clients.mlb_stats import fetch_all_players, fetch_schedule, fetch_umpires_for_game, _OFFICIAL_GAME_TYPES
 from app.common.utilities.arg_parser import parse_args
 from app.common.clients.gcs_client import download_json_from_gcs, upload_json_to_gcs
 
@@ -31,17 +31,17 @@ def _ingest_players(bucket: str) -> None:
 
 def _ingest_umpires(bucket: str, start_year: int, end_year: int) -> None:
     manifest = download_json_from_gcs(bucket, _UMPIRES_MANIFEST) or {}
-    last_game_pk = manifest.get("last_game_pk", 0)
+    processed_pks = set(manifest.get("processed_game_pks", []))
 
     start = date(start_year, 1, 1)
     end = date(end_year, 12, 31)
-    games = fetch_schedule(start, end)
+    games = fetch_schedule(start, end, game_types=_OFFICIAL_GAME_TYPES)
 
     failed_game_pks = []
     processed = 0
     for game in games:
         game_pk = game["gamePk"]
-        if game_pk <= last_game_pk:
+        if game_pk in processed_pks:
             continue
         game_date = date.fromisoformat(game["gameDate"][:10])
         try:
@@ -50,14 +50,14 @@ def _ingest_umpires(bucket: str, start_year: int, end_year: int) -> None:
                 existing = download_json_from_gcs(bucket, _umpire_path(game_date)) or []
                 existing.append(umpire)
                 upload_json_to_gcs(bucket, _umpire_path(game_date), existing)
-                last_game_pk = max(last_game_pk, game_pk)
+                processed_pks.add(game_pk)
                 processed += 1
         except Exception:
             logger.exception("Failed to ingest umpire data", extra={"game_pk": game_pk})
             failed_game_pks.append(game_pk)
 
     upload_json_to_gcs(bucket, _UMPIRES_MANIFEST, {
-        "last_game_pk": last_game_pk,
+        "processed_game_pks": sorted(processed_pks),
         "last_updated": date.today().isoformat(),
     })
     logger.info("Umpires ingestion complete", extra={"processed": processed, "failed": len(failed_game_pks)})
