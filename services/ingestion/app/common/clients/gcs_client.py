@@ -3,6 +3,7 @@ from functools import lru_cache
 
 from google.cloud import storage
 from pandas import DataFrame
+from tenacity import retry, stop_after_attempt, wait_exponential, before_sleep_log
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,7 @@ def __get_storage_client() -> storage.Client:
         raise
 
 
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=2, min=4, max=30), before_sleep=before_sleep_log(logger, logging.WARNING))
 def upload_dataframe_to_gcs(
     bucket_name: str, destination_blob_name: str, data: DataFrame
 ) -> None:

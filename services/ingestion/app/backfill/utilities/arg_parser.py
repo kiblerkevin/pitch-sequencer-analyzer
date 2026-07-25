@@ -1,11 +1,12 @@
 import argparse
+import os
 
 
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments for the backfill job."""
     parser = argparse.ArgumentParser(description="Backfill historical Statcast data")
     parser.add_argument(
-        "--bucket", type=str, required=True, help="GCS bucket for output"
+        "--bucket", type=str, default=os.environ.get("GCS_BUCKET"), help="GCS bucket for output"
     )
 
     mode = parser.add_mutually_exclusive_group(required=True)

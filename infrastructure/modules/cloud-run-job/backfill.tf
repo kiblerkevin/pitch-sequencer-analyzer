@@ -40,7 +40,10 @@ resource "google_cloud_run_v2_job" "backfill" {
     template {
       containers {
         image = "${var.repository_url}/backfill:${var.image_tag}"
-        args  = ["--bucket", var.bucket_name]
+        env {
+          name  = "GCS_BUCKET"
+          value = var.bucket_name
+        }
         resources {
           limits = {
             memory = "2048Mi"
@@ -63,7 +66,11 @@ resource "google_cloud_run_v2_job" "daily_ingestion" {
     template {
       containers {
         image = "${var.repository_url}/backfill:${var.image_tag}"
-        args  = ["--bucket", var.bucket_name, "--daily"]
+        args  = ["--daily"]
+        env {
+          name  = "GCS_BUCKET"
+          value = var.bucket_name
+        }
         resources {
           limits = {
             memory = "2048Mi"

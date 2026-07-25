@@ -1,0 +1,12 @@
+services:
+  backfill:
+    build:
+      context: ./services/ingestion
+      dockerfile: Dockerfile.backfill
+    platform: linux/amd64
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/tmp/adc.json
+      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
+      - GCS_BUCKET=${GCS_BUCKET}
+    volumes:
+      - ${HOME}/.config/gcloud/application_default_credentials.json:/tmp/adc.json:ro

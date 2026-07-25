@@ -1,5 +1,4 @@
 import logging
-import traceback
 from datetime import date, timedelta
 
 from app.backfill.clients.pybaseball import fetch_statcast_data
@@ -21,6 +20,9 @@ def _ingest_date(bucket: str, d: date) -> list[date]:
         destination = _gcs_path(d)
         logger.info("Starting ingestion", extra={"date": date_str, "bucket": bucket, "destination": destination})
         data = fetch_statcast_data(date_str, date_str)
+        if data is None or data.empty:
+            logger.info("No data for date, skipping", extra={"date": date_str})
+            return failed_dates
         logger.info(
             "Fetched Statcast data",
             extra={"date": date_str, "rows": len(data) if data is not None else None},
@@ -42,6 +44,8 @@ def main() -> None:
     """Cloud Run Job entry point for historical Statcast data backfill."""
     args = parse_args()
     bucket = args.bucket
+    if not bucket:
+        raise ValueError("GCS bucket must be provided via --bucket or GCS_BUCKET env var")
 
     failed_dates = []
     if args.daily:

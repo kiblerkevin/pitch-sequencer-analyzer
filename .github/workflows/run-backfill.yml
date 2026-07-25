@@ -64,16 +64,18 @@ jobs:
         run: |
           BUCKET="psa-${{ inputs.environment }}-data-lake-${{ vars.GCP_PROJECT_ID }}"
           if [ "${{ inputs.mode }}" = "daily" ]; then
-            echo "args=--bucket,${BUCKET},--daily" >> $GITHUB_OUTPUT
+            echo "args=--daily" >> $GITHUB_OUTPUT
           elif [ "${{ inputs.mode }}" = "date" ]; then
-            echo "args=--bucket,${BUCKET},--date,${{ inputs.date }}" >> $GITHUB_OUTPUT
+            echo "args=--date,${{ inputs.date }}" >> $GITHUB_OUTPUT
           else
-            echo "args=--bucket,${BUCKET},--start-year,${{ inputs.start_year }},--end-year,${{ inputs.end_year }}" >> $GITHUB_OUTPUT
+            echo "args=--start-year,${{ inputs.start_year }},--end-year,${{ inputs.end_year }}" >> $GITHUB_OUTPUT
           fi
+          echo "bucket=${BUCKET}" >> $GITHUB_OUTPUT
 
       - name: Execute backfill job
         run: |
           gcloud run jobs execute psa-${{ inputs.environment }}-backfill-job \
             --region ${{ vars.GCP_REGION }} \
             --args="${{ steps.args.outputs.args }}" \
+            --update-env-vars="GCS_BUCKET=${{ steps.args.outputs.bucket }}" \
             --wait
