@@ -10,18 +10,24 @@ _BASE_URL = "https://statsapi.mlb.com/api/v1"
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=2, min=4, max=30), before_sleep=before_sleep_log(logger, logging.WARNING))
-def fetch_all_players() -> list[dict]:
-    """Fetch all historical and active players from the MLB Stats API."""
-    try:
-        logger.info("Fetching all players")
-        response = requests.get(f"{_BASE_URL}/sports/1/players", params={"season": "all"}, timeout=30)
-        response.raise_for_status()
-        players = response.json().get("people", [])
-        logger.info("Fetched players", extra={"count": len(players)})
-        return players
-    except Exception:
-        logger.exception("Failed to fetch players")
-        raise
+def _fetch_players_for_season(year: int) -> list[dict]:
+    response = requests.get(f"{_BASE_URL}/sports/1/players", params={"season": year}, timeout=30)
+    response.raise_for_status()
+    return response.json().get("people", [])
+
+
+def fetch_all_players(start_year: int = 2016) -> list[dict]:
+    """Fetch all players across seasons, deduplicated by player ID."""
+    seen = {}
+    for year in range(start_year, date.today().year + 1):
+        try:
+            for player in _fetch_players_for_season(year):
+                seen[player["id"]] = player
+            logger.info("Fetched players for season", extra={"year": year, "total": len(seen)})
+        except Exception:
+            logger.exception("Failed to fetch players for season", extra={"year": year})
+            raise
+    return list(seen.values())
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=2, min=4, max=30), before_sleep=before_sleep_log(logger, logging.WARNING))
