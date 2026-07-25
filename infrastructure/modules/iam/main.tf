@@ -51,7 +51,7 @@ resource "google_pubsub_topic_iam_member" "ingestion_publisher" {
 
 resource "google_storage_bucket_iam_member" "ingestion_gcs_writer" {
   bucket = var.bucket_name
-  role   = "roles/storage.objectCreator"
+  role   = "roles/storage.objectUser"
   member = "serviceAccount:${google_service_account.ingestion.email}"
 }
 
