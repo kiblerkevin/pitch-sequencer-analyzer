@@ -55,6 +55,12 @@ resource "google_storage_bucket_iam_member" "ingestion_gcs_writer" {
   member = "serviceAccount:${google_service_account.ingestion.email}"
 }
 
+resource "google_project_iam_member" "ingestion_artifact_registry_reader" {
+  project = var.project_id
+  role    = "roles/artifactregistry.reader"
+  member  = "serviceAccount:${google_service_account.ingestion.email}"
+}
+
 # --- Orchestrator: Firestore read, Secret Manager read, Cloud Run invoke ---
 
 resource "google_project_iam_member" "orchestrator_firestore" {

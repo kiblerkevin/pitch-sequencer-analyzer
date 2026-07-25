@@ -11,5 +11,6 @@ COPY --from=builder /app/packages /app/packages
 COPY app/ app/
 
 ENV PYTHONPATH=/app/packages
+ENV PYTHONUNBUFFERED=1
 
 CMD ["python3", "-m", "app.backfill"]
