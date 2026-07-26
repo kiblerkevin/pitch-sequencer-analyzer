@@ -56,7 +56,7 @@ resource "google_cloud_run_v2_job" "reference" {
           }
         }
       }
-      timeout         = "600s"
+      timeout         = "1200s"
       service_account = var.service_account_email
     }
   }
@@ -84,7 +84,7 @@ resource "google_cloud_run_v2_job" "daily_reference" {
           }
         }
       }
-      timeout         = "600s"
+      timeout         = "1200s"
       service_account = var.service_account_email
     }
   }
@@ -97,7 +97,7 @@ resource "google_cloud_scheduler_job" "daily_reference" {
   description      = "Triggers daily MLB reference data refresh at 6am CT"
   schedule         = "0 11 * * *"
   time_zone        = "America/Chicago"
-  attempt_deadline = "600s"
+  attempt_deadline = "1200s"
 
   http_target {
     http_method = "POST"
