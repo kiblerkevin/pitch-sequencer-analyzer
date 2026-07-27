@@ -43,7 +43,7 @@ def _ingest_umpires(bucket: str, start_year: int, end_year: int) -> None:
         game_pk = game["gamePk"]
         if game_pk in processed_pks:
             continue
-        game_date = date.fromisoformat(game["gameDate"][:10])
+        game_date = date.fromisoformat(game["officialDate"])
         try:
             umpire = fetch_umpires_for_game(game_pk)
             if umpire:
@@ -103,9 +103,10 @@ def main() -> None:
             try:
                 umpire = fetch_umpires_for_game(game_pk)
                 if umpire:
-                    existing = download_json_from_gcs(bucket, _umpire_path(yesterday)) or []
+                    game_date = date.fromisoformat(game["officialDate"])
+                    existing = download_json_from_gcs(bucket, _umpire_path(game_date)) or []
                     existing.append(umpire)
-                    upload_json_to_gcs(bucket, _umpire_path(yesterday), existing)
+                    upload_json_to_gcs(bucket, _umpire_path(game_date), existing)
             except Exception:
                 logger.exception("Failed to ingest umpire data", extra={"game_pk": game_pk})
                 failed_game_pks.append(game_pk)
@@ -122,9 +123,10 @@ def main() -> None:
         for game in games:
             umpire = fetch_umpires_for_game(game["gamePk"])
             if umpire:
-                existing = download_json_from_gcs(bucket, _umpire_path(d)) or []
+                game_date = date.fromisoformat(game["officialDate"])
+                existing = download_json_from_gcs(bucket, _umpire_path(game_date)) or []
                 existing.append(umpire)
-                upload_json_to_gcs(bucket, _umpire_path(d), existing)
+                upload_json_to_gcs(bucket, _umpire_path(game_date), existing)
 
     else:
         start_year = args.start_year
