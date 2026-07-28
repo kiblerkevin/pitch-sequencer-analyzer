@@ -33,28 +33,26 @@ def _ingest_umpires(bucket: str, start_year: int, end_year: int) -> None:
     manifest = download_json_from_gcs(bucket, _UMPIRES_MANIFEST) or {}
     processed_pks = set(manifest.get("processed_game_pks", []))
 
-    start = date(start_year, 1, 1)
-    end = date(end_year, 12, 31)
-    games = fetch_schedule(start, end, game_types=_OFFICIAL_GAME_TYPES)
-
     failed_game_pks = []
     processed = 0
-    for game in games:
-        game_pk = game["gamePk"]
-        if game_pk in processed_pks:
-            continue
-        game_date = date.fromisoformat(game["officialDate"])
-        try:
-            umpire = fetch_umpires_for_game(game_pk)
-            if umpire:
-                existing = download_json_from_gcs(bucket, _umpire_path(game_date)) or []
-                existing.append(umpire)
-                upload_json_to_gcs(bucket, _umpire_path(game_date), existing)
-                processed_pks.add(game_pk)
-                processed += 1
-        except Exception:
-            logger.exception("Failed to ingest umpire data", extra={"game_pk": game_pk})
-            failed_game_pks.append(game_pk)
+    for year in range(start_year, end_year + 1):
+        games = fetch_schedule(date(year, 1, 1), date(year, 12, 31), game_types=_OFFICIAL_GAME_TYPES)
+        for game in games:
+            game_pk = game["gamePk"]
+            if game_pk in processed_pks:
+                continue
+            game_date = date.fromisoformat(game["officialDate"])
+            try:
+                umpire = fetch_umpires_for_game(game_pk)
+                if umpire:
+                    existing = download_json_from_gcs(bucket, _umpire_path(game_date)) or []
+                    existing.append(umpire)
+                    upload_json_to_gcs(bucket, _umpire_path(game_date), existing)
+                    processed_pks.add(game_pk)
+                    processed += 1
+            except Exception:
+                logger.exception("Failed to ingest umpire data", extra={"game_pk": game_pk})
+                failed_game_pks.append(game_pk)
 
     upload_json_to_gcs(bucket, _UMPIRES_MANIFEST, {
         "processed_game_pks": sorted(processed_pks),
