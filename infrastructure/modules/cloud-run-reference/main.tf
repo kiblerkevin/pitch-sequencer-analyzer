@@ -56,7 +56,7 @@ resource "google_cloud_run_v2_job" "reference" {
           }
         }
       }
-      timeout         = "1200s"
+      timeout         = "2400s"
       service_account = var.service_account_email
     }
   }
